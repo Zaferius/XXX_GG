@@ -27,6 +27,9 @@ public class GridManager : MonoBehaviour
 
     public void CreateGrid()
     {
+        matchCount = 0;
+        Actions.OnMatchDataChanged();
+        
         transform.localPosition = Vector3.zero;
         foreach (Transform child in transform)
         {
@@ -46,11 +49,12 @@ public class GridManager : MonoBehaviour
             {
                 var position = new Vector3(col * cellSize, row * -cellSize, 0);
                 var cell = Instantiate(cellPrefab, position, Quaternion.identity);
+                var cellSc = cell.GetComponent<Cell>();
                 cell.transform.parent = transform;
                 cell.transform.localScale = new Vector3(cellSize, cellSize, 1);
                 _grid[row, col] = cell;
-                cell.GetComponent<Cell>().row = row;
-                cell.GetComponent<Cell>().column = col;
+                cellSc.row = row;
+                cellSc.column = col;
             }
         }
         
@@ -63,9 +67,9 @@ public class GridManager : MonoBehaviour
     {
         bool[,] visited = new bool[size, size];
 
-        for (int row = 0; row < size; row++)
+        for (var row = 0; row < size; row++)
         {
-            for (int col = 0; col < size; col++)
+            for (var col = 0; col < size; col++)
             {
                 if (_grid[row, col].GetComponent<Cell>().isTaken && !visited[row, col])
                 {
@@ -78,9 +82,9 @@ public class GridManager : MonoBehaviour
                         {
                             cell.ClearCell();
                         }
-
+                        
                         matchCount++;
-                        Actions.OnCorrectMatch();
+                        Actions.OnMatchDataChanged();
                     }
                 }
             }
@@ -116,28 +120,13 @@ public class GridManager : MonoBehaviour
 
     private List<Cell> GetNeighbors(int row, int col)
     {
-        List<Cell> neighbors = new List<Cell>();
+        var neighbors = new List<Cell>();
 
-        if (row > 0) neighbors.Add(_grid[row - 1, col].GetComponent<Cell>()); // Yukarı
-        if (row < size - 1) neighbors.Add(_grid[row + 1, col].GetComponent<Cell>()); // Aşağı
-        if (col > 0) neighbors.Add(_grid[row, col - 1].GetComponent<Cell>()); // Sol
-        if (col < size - 1) neighbors.Add(_grid[row, col + 1].GetComponent<Cell>()); // Sağ
+        if (row > 0) neighbors.Add(_grid[row - 1, col].GetComponent<Cell>());
+        if (row < size - 1) neighbors.Add(_grid[row + 1, col].GetComponent<Cell>());
+        if (col > 0) neighbors.Add(_grid[row, col - 1].GetComponent<Cell>());
+        if (col < size - 1) neighbors.Add(_grid[row, col + 1].GetComponent<Cell>());
 
         return neighbors;
     }
-
-    private void ClearMarks()
-    {
-        for (int row = 0; row < size; row++)
-        {
-            for (int col = 0; col < size; col++)
-            {
-                if (_grid[row, col].GetComponent<Cell>())
-                {
-                    _grid[row, col].GetComponent<Cell>().ClearCell();
-                }
-            }
-        }
-    }
-    
 }

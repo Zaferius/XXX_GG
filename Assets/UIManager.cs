@@ -13,12 +13,12 @@ public class UIManager : MonoBehaviour
     
     private void OnEnable()
     {
-        Actions.OnCorrectMatch += CheckMatchCount;
+        Actions.OnMatchDataChanged += CheckMatchCount;
     }
 
     private void OnDisable()
     {
-        Actions.OnCorrectMatch -= CheckMatchCount;
+        Actions.OnMatchDataChanged -= CheckMatchCount;
     }
 
     private void Awake()
