@@ -1,44 +1,143 @@
+using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class GridManager : MonoBehaviour
 {
+    public static GridManager i;
+    
     public GameObject cellPrefab; 
-    private GameObject[,] grid;
-    private Camera cam;
+    private GameObject[,] _grid;
+    private Camera _cam;
 
-    public int rows = 3; 
-    public int columns = 3; 
-    private float cellSize = 1.0f;
+    [HideInInspector] public int size = 5;
+
+    public int matchCount;
+
+    private void Awake()
+    {
+        i = this;
+    }
 
     private void Start()
     {
-        cam = Camera.main;
+        _cam = Camera.main;
         CreateGrid();
     }
 
-    private void CreateGrid()
+    public void CreateGrid()
     {
-        grid = new GameObject[rows, columns];
+        transform.localPosition = Vector3.zero;
+        foreach (Transform child in transform)
+        {
+            Destroy(child.gameObject);
+        }
 
-        var orthographicSize = cam.orthographicSize;
+        _grid = new GameObject[size, size];
+
+        var orthographicSize = _cam.orthographicSize;
         var screenWidth = orthographicSize * 2.0f * Screen.width / Screen.height;
         var screenHeight = orthographicSize * 2.0f;
-        var cellSize = Mathf.Min(screenWidth / columns, screenHeight / rows);
+        var cellSize = Mathf.Min(screenWidth / size, screenHeight / size);
 
-        for (int row = 0; row < rows; row++)
+        for (var row = 0; row < size; row++)
         {
-            for (int col = 0; col < columns; col++)
+            for (var col = 0; col < size; col++)
             {
                 var position = new Vector3(col * cellSize, row * -cellSize, 0);
                 var cell = Instantiate(cellPrefab, position, Quaternion.identity);
                 cell.transform.parent = transform;
                 cell.transform.localScale = new Vector3(cellSize, cellSize, 1);
-                grid[row, col] = cell;
+                _grid[row, col] = cell;
+                cell.GetComponent<Cell>().row = row;
+                cell.GetComponent<Cell>().column = col;
             }
         }
         
-        var gridWidth = columns * cellSize;
-        var gridHeight = rows * cellSize;
+        var gridWidth = size * cellSize;
         transform.position = new Vector3(-gridWidth / 2 + cellSize / 2, screenHeight / 2 - cellSize / 2, 0);
     }
+    
+    
+    public void CheckMatches()
+    {
+        bool[,] visited = new bool[size, size];
+
+        for (int row = 0; row < size; row++)
+        {
+            for (int col = 0; col < size; col++)
+            {
+                if (_grid[row, col].GetComponent<Cell>().isTaken && !visited[row, col])
+                {
+                    List<Cell> matchedCells = new List<Cell>();
+                    FloodFill(row, col, visited, matchedCells);
+
+                    if (matchedCells.Count >= 3)
+                    {
+                        foreach (var cell in matchedCells)
+                        {
+                            cell.ClearCell();
+                        }
+
+                        matchCount++;
+                        Actions.OnCorrectMatch();
+                    }
+                }
+            }
+        }
+    }
+
+    private void FloodFill(int row, int col, bool[,] visited, List<Cell> matchedCells)
+    {
+        Queue<Cell> queue = new Queue<Cell>();
+        queue.Enqueue(_grid[row, col].GetComponent<Cell>());
+
+        while (queue.Count > 0)
+        {
+            Cell current = queue.Dequeue();
+            int curRow = current.row;
+            int curCol = current.column;
+
+            if (visited[curRow, curCol])
+                continue;
+
+            visited[curRow, curCol] = true;
+            matchedCells.Add(current);
+
+            foreach (var neighbor in GetNeighbors(curRow, curCol))
+            {
+                if (!visited[neighbor.row, neighbor.column] && neighbor.isTaken)
+                {
+                    queue.Enqueue(neighbor);
+                }
+            }
+        }
+    }
+
+    private List<Cell> GetNeighbors(int row, int col)
+    {
+        List<Cell> neighbors = new List<Cell>();
+
+        if (row > 0) neighbors.Add(_grid[row - 1, col].GetComponent<Cell>()); // Yukarı
+        if (row < size - 1) neighbors.Add(_grid[row + 1, col].GetComponent<Cell>()); // Aşağı
+        if (col > 0) neighbors.Add(_grid[row, col - 1].GetComponent<Cell>()); // Sol
+        if (col < size - 1) neighbors.Add(_grid[row, col + 1].GetComponent<Cell>()); // Sağ
+
+        return neighbors;
+    }
+
+    private void ClearMarks()
+    {
+        for (int row = 0; row < size; row++)
+        {
+            for (int col = 0; col < size; col++)
+            {
+                if (_grid[row, col].GetComponent<Cell>())
+                {
+                    _grid[row, col].GetComponent<Cell>().ClearCell();
+                }
+            }
+        }
+    }
+    
 }
